@@ -23,7 +23,7 @@ collatz3 n = if n < 2
 -- using guards
 collatz2 :: (Integral a) => a -> [a]
 collatz2 n
-  | n < 2 = [n]
+  | n < 2     = [n]
   | otherwise = let next x = if x `mod` 2 == 0 then x `div` 2 else x * 3 + 1
                 in n : collatz2 (next n)
                                 
@@ -145,3 +145,73 @@ flt _ []     = []
 flt p (x:xs) = if (p x) then x : flt p xs
                         else flt p xs
 
+-- infinte list of primes using list comprehension
+primes :: [Int]
+primes = let prm (p:xs) = p : [x | x <- prm xs, x `mod` p /= 0]
+         in prm [2..] 
+
+-- same using filter
+primes' :: [Int]
+primes' = let prm (p:xs) = p : filter (\x -> x `mod` p /= 0) (prm xs)
+          in prm [2..] 
+
+and' :: [Bool] -> Bool
+and' [] = True
+and' (x:xs) = x && and' xs
+
+concat' :: [[a]] -> [a]
+concat' [] = []
+concat' (xs:xxs) = xs ++ concat' xxs
+
+rep' :: Int -> a -> [a]
+rep' 0 _ = []
+rep' n x = x : rep' (n-1) x
+
+-- build n by m matrix
+rep2 :: Int -> Int -> a -> [[a]]
+rep2 0 _ _ = []
+rep2 n m x = (rep' m x) : rep2 (n-1) m x
+
+-- note recurse on both arguments and use underscore
+idx :: [a] -> Int -> a
+idx (x:_) 0 = x
+idx (_:xs) n = idx xs (n-1)
+
+-- insert value into an ordered list
+ins :: Ord a => a -> [a] -> [a]
+ins n [] = [n]
+ins n (x:xs)
+  | n <= x    = n : x : xs
+  | otherwise = x : ins n xs
+
+insort :: Ord a => [a] -> [a]
+insort []     = []
+insort (x:xs) = ins x (insort xs)
+
+-- merge 2 sorted lists
+mrg :: Ord a => [a] -> [a] -> [a]
+mrg [] ys = ys
+mrg xs [] = xs
+mrg (x:xs) (y:ys)
+  | x <= y    = x : mrg xs (y:ys)
+  | otherwise = y : mrg (x:xs) ys
+
+mrgsort' :: Ord a => [a] -> [a]
+mrgsort' [] = []
+mrgsort' [x] = [x]
+mrgsort' xs = mrg (mrgsort' $ take n xs) (mrgsort' $ drop n xs)
+              where n = length xs `div` 2
+
+-- splits list into 2 parts
+split :: Int -> [a] -> ([a], [a])
+split 0 xs = ([], xs)
+split _ [] = ([], [])
+split n (x:xs) = let (ys, zs) = split (n-1) xs
+                 in (x:ys, zs)
+
+-- merge sort - recursively split list into two, sort each half and merge results
+mrgsort :: Ord a => [a] -> [a]
+mrgsort [] = []
+mrgsort [x] = [x]
+mrgsort xs = let (ys, zs) = split (length xs `div` 2) xs
+             in mrg (mrgsort ys) (mrgsort zs)
