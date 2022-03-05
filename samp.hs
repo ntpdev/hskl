@@ -24,31 +24,29 @@ collatz3 n = if n < 2
 collatz2 :: (Integral a) => a -> [a]
 collatz2 n
   | n < 2     = [n]
-  | otherwise = let next x = if x `mod` 2 == 0 then x `div` 2 else x * 3 + 1
-                in n : collatz2 (next n)
-                                
+  | otherwise = n : collatz2 (next n)
+                where next x = if x `mod` 2 == 0 then x `div` 2 else x * 3 + 1
+                                             
+-- applies f x to get next num in sequence
+-- until the termination condition is met
+-- nb prelude has a similar fn until which returns the final value
+repeatUntil :: (a -> Bool) -> (a -> a) -> a -> [a]
+repeatUntil p f n = if p n
+                then [n]
+                else n : repeatUntil p f (f n)
+
 -- generalise by separating looping from calculation of next value
-coll :: Integer -> Integer
-coll x = if x `mod` 2 == 0 then x `div` 2 else x * 3 + 1
-
--- while predicate is true apply f x to get next num in sequence
--- includes the first element that fails the test
-rep :: (Integer -> Integer) -> (Integer -> Bool) -> Integer -> [Integer]
-rep f p x = if p x 
-              then x : rep f p (f x)
-              else [x]
-
 collatz :: Integer -> [Integer]
-collatz = rep coll (>1)
+collatz = repeatUntil (==1) (\x -> if x `mod` 2 == 0 then x `div` 2 else x * 3 + 1)
 
 -- apply f n times eg app 9 (+1) 0
-app :: Integer -> (a -> a) -> a -> a
-app 1 f x = f x
-app n f x = f (app (n-1) f x)
+app :: (a -> a) -> a -> Integer -> a
+app _ x 0 = x
+app f x n = f $ app f x (n-1)
 
 -- using app 
 fibgen2 :: Integer -> [Integer]
-fibgen2 n = app n (\xs -> (sum $ take 2 xs) : xs) [1,0]
+fibgen2 = app (\xs -> (sum $ take 2 xs) : xs) [1,0]
 
 -- infinte lists
 ones = 1 : ones
@@ -70,6 +68,11 @@ cartprod :: [[a]] -> [[a]]
 cartprod [] = [[]]
 cartprod (xs:yss) = [x : ys | x <- xs, ys <- cartprod yss]
 
+-- interleave element in list
+-- use foldr for transforming a list 3 [1,2] = [3,1,3,2,3]
+interl :: a -> [a] -> [a]
+interl x = foldr (\a b -> x : a : b) [x]
+
 -- reduce should ensure that the value of single element lists only exist in 1 list
 -- redc ["1234", "1", "34", "3"] = ["24", "1", "4", "3"]
 redc :: [[Char]] -> [[Char]]
@@ -81,12 +84,6 @@ redc2 (x:xs) ys = redc2 xs (redc3 (head x) ys)
 
 redc3 :: Char -> [[Char]] -> [[Char]]
 redc3 c xs = map (\x -> if length x == 1 then x else filter (\y -> c /= y) x) xs
-
--- inter returns all possible lists formed by adding an element to a list
--- inter 'a' "bc" = ["abc","bac","bca"]
-inter :: a -> [a] -> [[a]]
-inter x [] = [[x]]
-inter x (y:ys) = (x:y:ys) : map (y:) (inter x ys)
 
 -- Newtons method for a fn and its derivative fn' and initial guess
 approx :: (Float -> Float) -> (Float -> Float) -> Float -> Float
@@ -215,3 +212,50 @@ mrgsort [] = []
 mrgsort [x] = [x]
 mrgsort xs = let (ys, zs) = split (length xs `div` 2) xs
              in mrg (mrgsort ys) (mrgsort zs)
+
+-- foldr (\a (xs,ys) -> if a < 6 then (a:xs, ys) else (xs, a:ys))  ([], []) [5,6,4,1,9]
+part :: (a -> Bool) -> [a] -> ([a],[a])
+part f = foldr (\a (ts,fs) -> if f a then (a:ts, fs) else (ts, a:fs)) ([], [])
+
+splitAlt :: Bool -> [Int] -> ([Int], [Int])
+splitAlt _ [] = ([], [])
+splitAlt b (x:xs) = let (ys, zs) = splitAlt (not b) xs
+                    in if b then (x:ys, zs)
+                            else (ys, x:zs)
+
+splitLuhn :: [Int] -> ([Int], [Int])
+splitLuhn xs = splitAlt b xs
+               where b = (length xs) `mod` 2 == 0
+
+luhnDouble :: Int -> Int
+luhnDouble n = if n < 5 then 2 * n else 2 * n - 9
+
+luhn :: [Int] -> Bool
+luhn xs = (sumld ys + sum zs) `mod` 10 == 0
+          where sumld = sum . map luhnDouble
+                (ys, zs) = splitLuhn xs
+
+-- map alternating elements f first then g
+mapAlt :: (a -> b) -> (a -> b) -> [a] -> [b]
+mapAlt _ _ [] = []
+mapAlt f g (x:xs) = f x : mapAlt g f xs
+
+-- apply f to alternating elements ending at second from last
+mapAlt2 f g xs = if (length xs) `mod` 2 == 0 then mapAlt f g xs else mapAlt g f xs
+
+isValid :: Int -> Bool
+isValid n = n `mod` 10 == 0
+
+-- luhn' 1784 = true
+luhn' :: Integer -> Bool
+luhn' = isValid . sum . mapAlt2 luhnDouble id . int2list
+
+anaL' :: (t -> Maybe (a, t)) -> t -> [a]
+anaL' f b = case f b of
+              Nothing      -> []
+              Just (a, b') -> a : anaL' f b'
+
+int2list :: Integer -> [Int]
+int2list = reverse . anaL' (\t -> if t == 0 then Nothing
+                                            else Just (fromIntegral (t `mod` 10) :: Int, t `div` 10) )
+

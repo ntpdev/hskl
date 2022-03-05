@@ -1,5 +1,5 @@
 -- catamorphism is same a foldr
--- cataL (:) [] xs = identity
+-- cataL (:) [] [a] = id [a]
 -- cataL + 0 [1..3] = + 1 (+ 2 (+ 3 0))
 cataL :: (a -> b -> b) -> b -> [a] -> b
 cataL _ b [] = b
