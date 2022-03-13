@@ -24,13 +24,10 @@ validOps ps = [operP op p | p <- ps, op <- [Add, Sub, Mul, Div], isValid op (fst
 
 eval :: Exp -> Int
 eval (Val n) = n
-eval (Oper op exp1 exp2) = eval2 op (eval exp1) (eval exp2)
-
-eval2 :: Op -> Int -> Int -> Int
-eval2 Add x y = x + y
-eval2 Sub x y = abs (x - y)
-eval2 Mul x y = x * y
-eval2 Div x y = (max x y) `div` (min x y)
+eval (Oper Add exp1 exp2) = (eval exp1) + (eval exp2)
+eval (Oper Sub exp1 exp2) = abs ((eval exp1) - (eval exp2))
+eval (Oper Mul exp1 exp2) = (eval exp1) * (eval exp2)
+eval (Oper Div exp1 exp2) = (eval exp1) `div` (eval exp2)
 
 -- all sub sequences of a list
 -- alt way [f ys |f <- [id, (x:)], ys <- yss]
@@ -51,3 +48,12 @@ perms (x:xs) = concat (map (interleave x) (perms xs))
 -- concat (map perms (subseq xs))
 choices :: [a] -> [[a]]
 choices = concat . map perms . subseq
+
+-- all ways of splitting a list so that at least 1 item on each side
+splits :: [a] -> [([a],[a])]
+splits [] = []
+splits [_] = []
+splits (x:xs) = ([x], xs) : [ (x:ps, qs) | (ps,qs) <- splits xs]
+
+--toExp :: [Int] -> [Int] -> [Exp]
+--toExp lr rs = 
